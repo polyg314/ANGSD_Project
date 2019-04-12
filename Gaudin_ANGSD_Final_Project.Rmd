@@ -1,0 +1,268 @@
+---
+title: "Gaudin_ANGSD_Final_Project"
+author: "Paul Gaudin"
+date: "4/10/2019"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Get Fastq Files
+
+Did this using following SBATCH file: 
+
+```{bash eval=FALSE}
+
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=Project_Gets
+#SBATCH --time=72:00:00   # HH/MM/SS
+#SBATCH --mem=50G       # memory requested, units available: K,M,G,T
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/007/SRR5071107/SRR5071107.fastq.gz /home/ptg4001/Raw_Project_Reads/
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/008/SRR5071108/SRR5071108.fastq.gz /home/ptg4001/Raw_Project_Reads/
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/009/SRR5071109/SRR5071109.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/000/SRR5071110/SRR5071110.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/001/SRR5071111/SRR5071111.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/002/SRR5071112/SRR5071112.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/003/SRR5071113/SRR5071113.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/004/SRR5071114/SRR5071114.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/005/SRR5071115/SRR5071115.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/006/SRR5071116/SRR5071116.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/007/SRR5071117/SRR5071117.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/008/SRR5071118/SRR5071118.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/009/SRR5071119/SRR5071119.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/000/SRR5071120/SRR5071120.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/001/SRR5071121/SRR5071121.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/002/SRR5071122/SRR5071122.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+
+```
+
+####Run Fastqc and Multiqc on Fastq files  
+
+SBATCH File: 
+```{bash eval=FALSE}
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=Project_Alignment
+#SBATCH --time=72:00:00   # HH/MM/SS
+#SBATCH --mem=100G       # memory requested, units available: K,M,G,T
+
+spack load fastqc
+
+fastqc /home/ptg4001/Raw_Project_Reads/*.gz --extract -o /home/ptg4001/Raw_Project_Reads_QC
+
+spack load -r py-multiqc
+
+multiqc -n project_raw.multiqc.html /home/ptg4001/Raw_Project_Reads_QC/.
+```
+
+####Run STAR Alignment, Stats, Flagstats, and Multiqc 
+
+Used the following SBATCH File
+
+```{bash eval=FALSE}
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=Project_Alignment
+#SBATCH --time=72:00:00   # HH/MM/SS
+#SBATCH --mem=100G       # memory requested, units available: K,M,G,T
+
+spack load star@2.6.1a
+
+spack load samtools@1.9%gcc@6.3.0
+
+for sample in 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22; do
+
+	STAR --runMode alignReads --runThreadN 8 --genomeDir /athena/angsd/scratch/Paul_HG_data  --readFilesIn /home/ptg4001/Raw_Project_Reads/SRR50711${sample}.fastq.gz --readFilesCommand zcat --outFileNamePrefix /home/ptg4001/Aligned_Project_Reads/SRR50711${sample}.  --outSAMtype BAM SortedByCoordinate
+
+done
+
+for sample in 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22; do
+
+	samtools index /home/ptg4001/Aligned_Project_Reads/SRR50711${sample}.Aligned.sortedByCoord.out.bam
+
+	samtools stats /home/ptg4001/Aligned_Project_Reads/SRR50711${sample}.Aligned.sortedByCoord.out.bam  > /home/ptg4001/Project_Stats/SRR50711${sample}_STAR.stats
+
+	samtools flagstat /home/ptg4001/Aligned_Project_Reads/SRR50711${sample}.Aligned.sortedByCoord.out.bam > /home/ptg4001/Project_Stats/SRR50711${sample}_STAR.flagstats
+
+done
+
+spack load -r py-multiqc
+
+multiqc -n project.multiqc.html /home/ptg4001/Project_Stats/.
+
+```
+
+
+####Run Feature Counts on Aligned Files
+
+Used the following SBATCH File
+
+```{bash eval=FALSE}
+
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=Project_Alignment
+#SBATCH --time=72:00:00   # HH/MM/SS
+#SBATCH --mem=100G       # memory requested, units available: K,M,G,T
+
+spack load subread@1.6.2
+
+featureCounts -a /home/ptg4001/hg38.gtf -O -o /home/ptg4001/Project_featurecounts.txt -T 8  /home/ptg4001/Aligned_Project_Reads/*.bam
+```
+
+####Import featureCounts readcounts
+```{r}
+##folder <- "~/Documents/Teaching/ANGSD/RNA/"
+folder <- "./"
+# reading in featureCounts output
+readcounts <- read.table(paste0(folder, "Project_featurecounts.txt"),
+header=TRUE)
+head(readcounts)
+
+```
+
+#### Just read counts with row names as geneids, rows with sums 0 deleted
+```{r}
+#library(org.Hs.eg.db)
+#library(annotate)
+
+#count_table_adjusted <- readcounts[,7:22]
+
+#row.names(count_table_adjusted) <- getSYMBOL(as.character(readcounts[,1]), data='org.Hs.eg')
+
+#count_table_adjusted = count_table_adjusted[ rowSums(count_table_adjusted)!=0, ] 
+
+
+
+```
+
+####Finish preparing count table for analysis in DESeq
+
+```{r}
+
+
+## retrieve the ENSEMBL symbols for the gene names
+#anno.hs <- select(org.Hs.eg.db,
+#               keys = gns$V1, 
+#               keytype="SYMBOL", 
+#               columns=c("ENSEMBL","SYMBOL","GENENAME")) # what to return
+
+gene_trans_ids <- as.character(readcounts[,1])
+
+gene_trans_ids <- gsub("\\..*","", gene_trans_ids)
+
+#AnnotationDbi::select(org.Hs.eg.db, key=gene_trans_ids, columns=c("SYMBOL"), keytype="ENSEMBLPROT")
+
+
+#library('biomaRt')
+#mart <- useDataset("hsapiens_gene_ensembl", useMart("ensembl"))
+#genes <- as.character(readcounts[,1])
+#df<-df[,-4]
+#G_list <- getBM(filters= "ensembl_peptide_id", attributes= c("ensembl_peptide_id","hgnc_symbol"),values=genes,mart= mart)
+#merge(df,G_list,by.x="gene",by.y="ensembl_peptide_id")
+
+```
+
+```{r}
+library(biomaRt)
+
+# 3. Get symbols for Ensembl IDs
+
+ensembl_ids = gene_trans_ids
+
+#ensembl_ids = c("ENSG00000243485", "ENSG00000237613", "ENSG00000186092", "ENSG00000238009")
+
+mart = useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", host = "www.ensembl.org", ensemblRedirect = FALSE)
+
+#mart <- useDataset("hsapiens_gene_ensembl", useMart("ensembl"))
+
+dat = getBM(
+  values = ensembl_ids,
+  filters = c("ensembl_transcript_id"),
+  attributes = c("ensembl_transcript_id", "external_gene_name", "description"),
+  mart = mart
+)
+
+write.table(
+  dat,
+  file = "biomart.tsv",
+  quote = FALSE,
+  sep = "\t",
+  row.names = FALSE
+)
+
+gene.id.df <- data.frame(dat$external_gene_name, dat$description)
+
+row.names(gene.id.df) <- dat$ensembl_transcript_id
+
+write.csv(gene.id.df, file = "ProjectGenesDataFrame.csv")
+
+```
+
+```{r eval=FALSE}
+
+count_table_adjusted <- readcounts[,7:22]
+
+row_names_as_symbols <- c();
+
+for(i in 1:length(gene_trans_ids)){
+  if(is.na(as.character(gene.id.df[gene_trans_ids[i],1]))){
+    row_names_as_symbols <- c(row_names_as_symbols, gene_trans_ids[i]);
+  }
+  else{
+    row_names_as_symbols <- c(row_names_as_symbols, (as.character(gene.id.df[gene_trans_ids[i],1])));
+  }
+}
+
+row.names(count_table_adjusted) <- row_names_as_symbols
+
+count_table_adjusted = count_table_adjusted[ rowSums(count_table_adjusted)!=0, ]
+
+save(row_names_as_symbols, file="row_names_as_symbols.rds")
+
+
+
+
+```
+
+library(org.Hs.eg.db) ## covert gene ids to gene symbols 
+
+  if NA then keep gene ID 
+
+_> one row for each gene 
+
+
+DESq
