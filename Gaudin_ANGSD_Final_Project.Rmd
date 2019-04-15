@@ -249,20 +249,207 @@ for(i in 1:length(gene_trans_ids)){
 
 row.names(count_table_adjusted) <- row_names_as_symbols
 
-count_table_adjusted = count_table_adjusted[ rowSums(count_table_adjusted)!=0, ]
+
 
 save(row_names_as_symbols, file="row_names_as_symbols.rds")
 
+```
 
+```{r}
+
+counts_table_prepared <- count_table_adjusted[1,]
+row.names(counts_table_prepared) <- row_names_as_symbols[1]
+
+for(i in 2:length(row_names_as_symbols)){
+  if (!(row_names_as_symbols[i] %in% row.names(counts_table_prepared))) {
+    newRow <- count_table_adjusted[i,];
+    row.names(newRow) <- row_names_as_symbols[i]
+    counts_table_prepared[nrow(counts_table_prepared) + 1,] <- newRow
+  }
+  else{
+    counts_table_prepared[row_names_as_symbols[i],] <- counts_table_prepared[row_names_as_symbols[i],] + count_table_adjusted[i,]
+  }
+}
+
+```
+
+```{r}
+counts_table_prepared = counts_table_prepared[ rowSums(counts_table_prepared)!=0, ]
+
+column_names <- c("", "SRR5071107", "SRR5071108", "SRR5071109", "SRR5071110", "SRR5071111", "SRR5071112", "SRR5071113", "SRR5071114", "SRR5071115", "SRR5071116", "SRR5071117", "SRR5071118", "SRR5071119", "SRR5071120", "SRR5071121", "SRR5071122") 
+
+colnames(counts_table_prepared) <- column_names
+
+ctpp <- counts_table_prepared[,2:17]
+
+row_names <- c()
+
+for(i in 1:dim(counts_table_prepared)[1]){
+  row_names <- c(row_names, as.character(counts_table_prepared[i,1]))
+}
+
+save(row_names, file="row_names.rds")
+#row.names(ctpp) <- row_names
+
+#write.csv(counts_table_prepared, file = "counts_table_prepared.csv")
+```
+
+
+```{r}
+
+sample_type = c("HIV_EXP_GFP_NEG", "HIV_EXP_GFP_NEG", "VLP_VPX_TREATED", "VLP_VPX_TREATED", "HIV_EXP_GFP_POS", "HIV_EXP_GFP_NEG", "VLP_VPX_TREATED", "NON_EXPOSED_OR_TREATED", "NON_EXPOSED_OR_TREATED", "HIV_EXP_GFP_POS", "HIV_EXP_GFP_NEG", "VLP_VPX_TREATED", "HIV_EXP_GFP_POS", "HIV_EXP_GFP_POS", "NON_EXPOSED_OR_TREATED", "NON_EXPOSED_OR_TREATED")
+
+donor = c("Donor_4", "Donor_3", "Donor_4", "Donor_1", "Donor_1", "Donor_1", "Donor_3", "Donor_2", "Donor_1", "Donor_4", "Donor_2", "Donor_2", "Donor_3", "Donor_2", "Donor_3", "Donor_4")
+
+column_data <- data.frame(sample_type, donor)
+
+rownames(column_data) <- column_names
+
+library("DESeq2")
+
+cts <- as.matrix(ctpp)
+
+row.names(cts) <- row_names
+
+save(cts, file="cts.rds")
+
+dds <- DESeqDataSetFromMatrix(countData = cts,
+                              colData = column_data,
+                              design= ~ donor + sample_type)
+
+
+dds <- DESeq(dds)
 
 
 ```
 
-library(org.Hs.eg.db) ## covert gene ids to gene symbols 
 
-  if NA then keep gene ID 
+#### row sum >= 10
+```{r}
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+```
 
-_> one row for each gene 
+#### set reference (control) as NON_EXPOSED_OR_TREATED
+```{r}
+dds$sample_type <- relevel(dds$sample_type, ref = "HIV_EXP_GFP_NEG")
+
+```
+
+```{r}
+
+dds <- DESeq(dds)
+
+res <- results(dds)
+
+resultsNames(dds)
+
+```
+
+```{r}
+
+resultsNames(dds)
+
+resLFC <- lfcShrink(dds, coef="sample_type_HIV_EXP_GFP_POS_vs_HIV_EXP_GFP_NEG", type="apeglm")
+
+#BF_cutoff <- 39470
+
+#resLFC <- results(dds, alpha=0.05/BF_cutoff)
+```
+
+```{r}
+summary(resLFC)
+```
+```{r}
+#resLFC <- results(resLFC, alpha=0.05/BF_cutoff)
+```
+
+```{r}
+
+resOrdered <- res[order(res$pvalue),]
+
+```
+
+How many adjusted p-values were less than 0.1?
+
+```{r}
+#sum(res$padj < 0.1, na.rm=TRUE)
+```
 
 
-DESq
+```{r}
+BF_cutoff <- 39470
+
+#res05 <- results(dds, alpha=0.05/BF_cutoff)
+#summary(res05)
+
+
+sum(resLFC$pvalue < 0.05/BF_cutoff, na.rm=TRUE)
+```
+
+MA-plot
+
+```{r}
+plotMA(resLFC, ylim=c(-4,4))
+
+```
+
+```{r}
+#plotMA(resLFC, ylim=c(-4,4))
+
+#summary(resLFC)
+#idx <- identify(res$baseMean, res$log2FoldChange)
+```
+
+
+```{r}
+
+mcols(resLFC)$description
+
+```
+
+
+```{r}
+hist(resLFC$pvalue, breaks=100, col="skyblue", border="slateblue", main="")
+
+```
+
+
+We may also want to look at the most strongly down-regulated of the significant genes,
+```{r}
+BF_cutoff_pval <- 0.05/BF_cutoff
+
+head( resLFC[ order( resLFC$log2FoldChange, -resLFC$baseMean ), ], 100 )
+
+Most_DR <-  resLFC[ order( resLFC$log2FoldChange, -resLFC$baseMean ), ]
+
+Most_DR_top <- data.frame(Gene=character(), Log2FoldChange=double(), Pvalue=double(), GeneDescription=character(), stringsAsFactors=FALSE)
+
+count <- 0
+
+for(i in 1:nrow(Most_DR)){
+  if(Most_DR$pvalue[i] < 0.05){
+    gene_name <- row.names(Most_DR[i,])
+    gene_position_in_ref <- which(grepl(gene_name, ProjectGenesDataFrame$dat.external_gene_name))[1]
+    gene_description <- ProjectGenesDataFrame[gene_position_in_ref, 3]
+    count <- count + 1;
+    Most_DR_top[count,] <- c(Gene=gene_name, Most_DR[i,]$log2FoldChange, Most_DR[i,]$pvalue,GeneDescription=gene_description)
+  }
+  if(count == 30){
+    break
+  }
+}
+
+```
+
+
+or at the most strongly up-regulated ones:
+
+```{r}
+
+head( resLFC[ order( -resLFC$log2FoldChange, -resLFC$baseMean ), ], 30 )
+
+```
+
+
+
