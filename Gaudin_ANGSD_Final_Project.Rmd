@@ -1,5 +1,5 @@
 ---
-title: "Gaudin_ANGSD_Final_Project"
+title: "Investigating Differentially Expressed Genes in Latent HIV+ T Cells"
 author: "Paul Gaudin"
 date: "4/10/2019"
 output: html_document
@@ -82,6 +82,8 @@ Then to get the output html into my PC project directory (from within project di
 scp ptg4001@aristotle.med.cornell.edu:Project_Stats/project.multiqc.html . 
 ```
 
+Upon analyzing the output, I noticed that there would be no need to use trimgalore as my adapter content was low. Additionally, the sequences generally were of very high quality, however one point of concern is the high number of duplicate reads. 
+
 ####Run STAR Alignment
 
 I used the STAR Aligner mainly for its compatibility with RNAseq data. As compared to BWA, STAR Aligner is splice aware - meaning that it can match transcripts to the genome that have their introns spliced out. 
@@ -123,8 +125,6 @@ Then used the following SBATCH File (after ref genome moved to athena using mv c
 
 spack load star@2.6.1a
 
-spack load samtools@1.9%gcc@6.3.0
-
 for sample in 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22; do
 
 	STAR --runMode alignReads --runThreadN 8 --genomeDir /athena/angsd/scratch/Paul_HG_data  --readFilesIn /home/ptg4001/Raw_Project_Reads/SRR50711${sample}.fastq.gz --readFilesCommand zcat --outFileNamePrefix /home/ptg4001/Aligned_Project_Reads/SRR50711${sample}.  --outSAMtype BAM SortedByCoordinate
@@ -144,9 +144,11 @@ Batch file:
 #SBATCH --partition=angsd_class
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --job-name=Project_Alignment
+#SBATCH --job-name=Project_Stats
 #SBATCH --time=72:00:00   # HH/MM/SS
 #SBATCH --mem=100G       # memory requested, units available: K,M,G,T
+
+spack load samtools@1.9%gcc@6.3.0
 
 for sample in 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22; do
 
@@ -168,6 +170,8 @@ Then to get the output html onto my PC:
 ```{bash eval=FALSE}
 scp ptg4001@aristotle.med.cornell.edu:project.multiqc.html . 
 ```
+
+In looking at these files, I noticed very high alignment scores to the reference genome, indicating that the STAR alignments went well. 
 
 ####Run featureCounts on Aligned Files
 
@@ -390,6 +394,15 @@ res_padj_under_co <- res_padj[which(res_padj < 10^-8)]
 hist(res_padj_under_co, breaks=100, col="skyblue", border="slateblue", main="")
 ```
 
+####Volcano plot of the log2FoldChange vs pvalues for expression in "HIV_EXP_GFP_POS" vs "HIV_EXP_GFP_NEG" samples 
+```{r message=FALSE}
+
+library(EnhancedVolcano)
+
+EnhancedVolcano(res, lab = rownames(res), x = "log2FoldChange",y = "padj", pCutoff = 10e-8,  xlim = c(-6, 6))
+
+```
+
 
 ####Look at the most down-regulated of the significant genes
 ```{r}
@@ -454,22 +467,6 @@ for(i in 1:nrow(Most_UR)){
 knitr::kable(Most_UR_top[1:10,], caption = '10 Most Up Regulated Genes (p < 1*10^-8')
 ```
 
-
-#### Look at Gene of Interest in Referenced Descours et al. Study, "CD32a" 
-
-NOTE: This gene name has synonym names, which in my analysis the gene synonym is "FCGR2A"
-
-```{r}
-
-d <- plotCounts(dds, gene=which(row.names(res) == "FCGR2A"), intgroup=c("sample_type"), 
-                returnData=TRUE)
-library("ggplot2")
-ggplot(d, aes(x=sample_type, y=count, color=donor)) + 
-  geom_point(position=position_jitter(w=0.1,h=0)) + 
-  scale_y_log10()
-
-```
-
 ####Create PCA plots - one using sample type and other using donor variables
 ```{r}
 
@@ -505,15 +502,20 @@ pheatmap(sampleDistMatrix,
 ```
 
 
-####Volcano plot of the log2FoldChange vs pvalues for expression in "HIV_EXP_GFP_POS" vs "HIV_EXP_GFP_NEG" samples 
-```{r message=FALSE}
+#### Look at Gene of Interest in Referenced Descours et al. Study, "CD32a" 
 
-library(EnhancedVolcano)
+NOTE: This gene name has synonym names, which in my analysis the gene synonym is "FCGR2A"
 
-EnhancedVolcano(res, lab = rownames(res), x = "log2FoldChange",y = "padj", pCutoff = 10e-8)
+```{r}
+
+d <- plotCounts(dds, gene=which(row.names(res) == "FCGR2A"), intgroup=c("sample_type"), 
+                returnData=TRUE)
+library("ggplot2")
+ggplot(d, aes(x=sample_type, y=count, color=donor)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) + 
+  scale_y_log10()
 
 ```
-
 
 ####Generate Histogram plot of log2 Fold Changes in the Surface Proteins of interest identified in Descours et al., using standard error for error bars
 ```{r}
@@ -570,19 +572,19 @@ which(row.names(res) == "AQP9")
 
 ##Results
 
-According to my own analysis, there were 585 significantly upregulated genes when comparing HIV positive versus the control HIV negative T cells, 166 of which had a log2 fold change more than 3, while there 0 significantly downregulated genes. These can be observed when looking at the Histograms of the adjusted p-values as well.  
+According to my own analysis, there were 585 significantly upregulated genes when comparing HIV positive versus the control HIV negative T cells, 166 of which had a log2 fold change more than 3, while there 0 significantly downregulated genes. These can be observed when looking at the Histograms of the adjusted p-values, as well as looking at the MA Plot (however note that the red dots indicate non-adjusted p-values that are below the 10^-8 cutoff). 
+
+The Volcano plot also shows that there are many significantly upregulated genes, especially above a 2-log2 change, however, there are some genes that show significanly higher upregulation that are still significant (using padj), such as TUSC7 and MYBPHL. Yet, the most significant upregulated gene was KLRC4-KLRK1, which had a log2 fold change of about 3. 
 
 Upon observing the count comparisons for the gene of interest in Descours et al., “CD32a,” one can observe that the expression of CD32a (aka. FCGR2A) is significantly higher in the HIV infected cells.  
 
 When looking at the PCA plots, one can notice that there is not noticably significant clustering among the sample types, and rather appears to be a result of both the donor cell line as well as the sample type. This same trend additionally appears true for the heatmapping of the different samples. 
 
-The Volcano plot shows that there are many significantly upregulated genes, especially above a 2log change, however, there are some genes that show significanly higher upregulation that are still significant, such as TUSC7 and MYBPHL. Yet, the most significant upregulated gene was KLRC4-KLRK1, which had a log2 fold change of about 3. 
-
 Finally, when looking at the Histogram of the 15 of the identified upregulated surface protein genes identified in Descours et al., all of these appeared upregulated, although only about half of these genes had adjusted pvalues < 10*-8. 
 
 ##Discussion
 
-While Descours et al. found 111 to be upregulated under the same p-value cutoff of 10*-8, as compared to my 585 significantly upregulated genes, they also found 0 significantly downregulated genes. However, Descours et al. fails to discuss whether there was a log2 fold change minimum for identifying such genes. If they did infact include an additional such cutoff, my results in this area would be much more inline with their findings. 
+While Descours et al. found 111 to be upregulated under the same p-value cutoff of 10*-8, as compared to my 585 significantly upregulated genes, they also found 0 significantly downregulated genes. However, Descours et al. fails to discuss whether there was a log2 fold change minimum for identifying such genes. If they did in fact include an additional such cutoff, my results in this area would be much more inline with their findings. 
 
 Of note as well is the observation that the pvalues and logfold changes I found for “CD32a” was similar to that found in Descours et al. However the PCA plots and Heatmap I generated appeared to be more influenced by donor type than those published in Descours et al. 
 
@@ -590,13 +592,13 @@ The observation that draws the most skepticism in my results, however, is the fi
 
 ![Figure 2a. Expression values, determing by flow cytometry screening of 16 Surface Proteins Found to Be Upregulation in the HIV+ Cells as compared to HIV-negative controls ^7^](Figure_2a.png)
 
-While this was at first concerning, I later learned that these findings had been refuted a year later by another research group, which later published the following article in Nature as well: 
+While this was at first concerning, I later learned that these findings had been refuted a year later by a different research group, which later published the following article in Nature as well: 
 
 Osuna, Christa E., et al. "Evidence that CD32a does not mark the HIV-1 latent reservoir." Nature 561.7723 (2018):E20^8^
 
 In this article, the researchers found no siginficant differences in screening via flow cytometry for the CD32a surface marker protein. However, the researchers in this article did not investigate differential gene expression in the cells.^8^
 
-Finally, a few points of concern are left. Regarding my own analysis, high duplication levels seen in the FastQCs of the raw read counts begs for a method to help cut down on these duplicats. In future analyses, it might be beneficial to use the --ignoreDup option in featureCounts to help elminate the influence of these duplicates on the differential gene expression analysis. Additionally, regarding the sample preparation done by Descours et al., the researchers only incubated the HIV infected cells for 4 days. It is unclear, however, as to whether this time period is sufficient for identifying indicative markers of differential gene expression of latently infected HIV+ T cells, as it has been known that HIV can lay dormant in cells for years or longer.  
+Finally, a few points of concern are left. Regarding my own analysis, high duplication levels seen in the FastQCs of the raw read counts begs for a method to help cut down on these duplicats. In future analyses, it might be beneficial to use the --ignoreDup option in featureCounts to help elminate the influence of these duplicates on the differential gene expression analysis. Of note as well is that Descours et al. used the STAR aligner and DESeq2 as well, however they performed counting using HT-SeqCount, which could be a counting tool I could experiment with. Additionally, regarding the sample preparation done by Descours et al., the researchers only incubated the HIV infected cells for 4 days. It is unclear, however, as to whether this time period is sufficient for identifying indicative markers of differential gene expression of latently infected HIV+ T cells, as it has been known that HIV can lay dormant in cells for years or longer.  
 
 
 ##Key Data Sets
