@@ -2,18 +2,38 @@
 title: "Gaudin_ANGSD_Final_Project"
 author: "Paul Gaudin"
 date: "4/10/2019"
-output:
-  html_document:
-    code_folding: hide
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+##Introduction
+
+Currently, HIV can be treated but not cured. As of 2017, there were an estimated 36.9 million people living with HIV globally, only 21.7 million of which were accessing antiretroviral therapy (ART).^1^ Additionally, approximately 9.4 million people do not know they are living with HIV, and there were about 1.8 new infections, and an estimated 940,000 people died from AIDS-related illnesses in 2017.^1^ While a vaccine is often discussed as the long-term solution for ending the AIDS epidemic, less talked about is finding a cure for the millions already infected with HIV. Additionally, while treatment of HIV is now highly effective, with the ability to lower viral loads to undetectable and untransmittable levels, it is still far from perfect. Not only do many people not have access to antiretroviral therapy, especially in developing countries, but in the US the average cost of HIV treatment and related health care is on average about $20,000 (as of 2006).^2^ Furthermore, side effects are also common in ART, and can include appetite loss, lipodystrophy, diarrhea, fatigue, mood changes, depression, anxiety, nausea and vomiting, rashes, trouble sleeping, and more. These side effects, especially in developing countries such as Cameroon, are a strong predictor of non-adherence to treatment regimens, causing many patients to forgo ART.^3^
+
+Latency is seen as the largest barrier to eliminating HIV in HIV positive patients, as a state of latent infection in individual T cells persists indefinitely in patients on ART.^4^ The mechanisms that allow latency are complex, but are known to include the absence of key host transcription factors and Tat, the presence of epigenetic changes that inhibit HIV expression, and the presence of factors involved in transcriptional interference.^4^ 
+
+As HIV released from latently infected T cells can be blocked from additional replication by ART, approaches for reactivating stable latent viruses within T cell reservoirs has been identified as a potential route for eliminating HIV reservoirs in HIV positive patients.^4^ This approach for elimination has been termed as ‘shock and kill,’ however it so far has only seen limited success.^5^ Approaches for shock and kill have utilized many molecular mechanisms involved in HIV-latency, which include Latency-reversing agents (LRAs) such as include protein kinase C (PKC) agonists, histone deacetylase inhibitors (HDACi), histone methylation inhibitors (HMTi), DNA methyltransferase inhibitors (DNMTi), inhibitors of bromodomain and extraterminal (BET) domain proteins (BETi), or unclassified agents such as disulfiram.^4,6^ However, as with PKC agonists, a major drawback for these approaches includes their lack of specificity for latently infected cells.^4^ Furthermore, the level of reactivation, the diversity of reactivation in differing cell types, optimal time schedules of LRA treatment, the stochastic nature of the induction of latent HIV, and HIV’s dynamic properties all pose challenges to shock and kill.^6^
+
+An alternative approach to shock and kill is the more newly proposed, and less investigated, ‘lock’ route.^6^ This route would utilize strategies that would lock the virus into deep latency, permanently preventing any downstream viral reactivation. Molecules of interest in this route namely include those that interact with the Tat protein, which plays a critical role in HIV transcription, as well as others such as heat shock protein 90, which plays a necessary role in viral transcription under hyperthermic conditions.^6^
+
+Latently infected cells have been seen to maintain their latency via several mechanisms that act predominantly at the transcriptional level, as well as some at the post-transcriptional level.^6^ Hence, one could predict that the proteins and underlying transcriptomes of a latent infected cell would differ from that of a non-infected cell. Assuming there are differences in the transcriptomes of the latently infected versus non-infected T-cells, illuminating these differences could be crucial in advancing either the shock and kill or lock techniques for eliminating or permanently preventing further replication of the HIV virus within an infected patient on ART. An example of this would be in identifying transmembrane proteins and surface receptors that may be unique to quiescent HIV-infected cells. If one were to identify a cell surface receptor unique to these cells, this receptor could be utilized in the development of a targeted therapy that directly targets cells containing an HIV reservoir. Another example would be in the identification of protein coding transcripts that code for intracellular proteins unique to latently infected cells, whereby these proteins may be necessary for the established dormancy of the virus, and if targeted, may allow for viral replication to be reestablished and downstream elimination by ART.
+
+In my analyses, I am investigating the differential expression of RNA transcripts between quiescent HIV-infected CD4+ T cells and non-infected CD4+ T cells, under the hypothesis that there is differential expression in latently infected CD4+ T cells. The data and experimental design of my analyses is based of the data collected by the researchers Descours et al., presented in 2017 in a Nature article titled “CD32a is a marker of a CD4 T-cell HIV reservoir harboring replication-competent proviruses.”^7^ In the first section of this article, the researchers describe the process by which they used an in vitro model of HIV-infected quiescent CD4 T-cells to screen for upregulated genes. To do this, the researchers used four HIV-negative controls that were then infected with HIV (with a green fluorescent reporter) after treatment with viral like particles containing the accessory VLP-vpx, which induces SAMHD1 degredation.^7^ HIV latently infected and HIV-exposed cells were sorted via fluorescence-activated cell sorting (FACS) and total RNA was extracted and ultra-deep sequenced (see Figure 1).^7^ 
+
+![Figure 1. The general workflow by which latently HIV infected, HIV exposed, and non-infected but treated and non-infected or treated controls were obtained.^7^](Figure_1.png)
+
+Additionally, total RNA was extracted and ultra-deep sequenced from untreated and uninfected CD4 T cells as controls (Figure 1). What the researchers found were 103 exclusively differentially expressed genes in the HIV positive CD4 T-cells.^7^ While the researchers carried out additional experimentation, mainly focused on the differentially expressed transmembrane CD32a protein marker in the HIV-infected T cells, the data I will be utilizing in my analyses is limited to this RNAseq NGS data generated, which can be found on the European Bioinformatics Institute website at: https://www.ebi.ac.uk/ena/data/view/PRJNA355967.
+
+##Methods
+
+To carry out this analysis on the NGS data I used FastQC/MultiQC to assess raw sequence NGS quality, the mapping tool STAR aligner to align reads to the Human Genome, Samtools to assess the alignment quality, the counting tool featureCounts to determine gene counts, and DESeq2 to normalize the data and do differential gene expression analysis.  
+
 #### Get Fastq Files
 
-Did this using following SBATCH file: 
+To get the Fastq files from https://www.ebi.ac.uk/ena/data/view/PRJNA355967 into my Raw_Project Reads directory I used the following SBATCH file: 
 
 ```{bash eval=FALSE}
 
@@ -26,43 +46,18 @@ Did this using following SBATCH file:
 #SBATCH --time=72:00:00   # HH/MM/SS
 #SBATCH --mem=50G       # memory requested, units available: K,M,G,T
 
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/007/SRR5071107/SRR5071107.fastq.gz /home/ptg4001/Raw_Project_Reads/
+for sample in 007/SRR5071107/SRR5071107 008/SRR5071108/SRR5071108 009/SRR5071109/SRR5071109 000/SRR5071110/SRR5071110 001/SRR5071111/SRR5071111 002/SRR5071112/SRR5071112 003/SRR5071113/SRR5071113 004/SRR5071114/SRR5071114 005/SRR5071115/SRR5071115 006/SRR5071116/SRR5071116 007/SRR5071117/SRR5071117 008/SRR5071118/SRR5071118 009/SRR5071119/SRR5071119 000/SRR5071120/SRR5071120 001/SRR5071121/SRR5071121 002/SRR5071122/SRR5071122; do
 
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/008/SRR5071108/SRR5071108.fastq.gz /home/ptg4001/Raw_Project_Reads/
+	wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/${sample}.fastq.gz /home/ptg4001/Raw_Project_Reads/
 
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/009/SRR5071109/SRR5071109.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/000/SRR5071110/SRR5071110.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/001/SRR5071111/SRR5071111.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/002/SRR5071112/SRR5071112.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/003/SRR5071113/SRR5071113.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/004/SRR5071114/SRR5071114.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/005/SRR5071115/SRR5071115.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/006/SRR5071116/SRR5071116.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/007/SRR5071117/SRR5071117.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/008/SRR5071118/SRR5071118.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/009/SRR5071119/SRR5071119.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/000/SRR5071120/SRR5071120.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/001/SRR5071121/SRR5071121.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
-
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR507/002/SRR5071122/SRR5071122.fastq.gz /home/ptg4001/Raw_Project_Reads/ 
+done
 
 ```
 
 ####Run Fastqc and Multiqc on Fastq files  
 
-SBATCH File: 
+I used the following SBATCH File to analyze the Raw Reads: 
+
 ```{bash eval=FALSE}
 #! /bin/bash -l
 
@@ -82,9 +77,39 @@ spack load -r py-multiqc
 multiqc -n project_raw.multiqc.html /home/ptg4001/Raw_Project_Reads_QC/.
 ```
 
-####Run STAR Alignment, Stats, Flagstats, and Multiqc 
+Then to get the output html into my PC project directory (from within project directory on computer): 
+```{bash eval=FALSE}
+scp ptg4001@aristotle.med.cornell.edu:Project_Stats/project.multiqc.html . 
+```
 
-Used the following SBATCH File
+####Run STAR Alignment
+
+I used the STAR Aligner mainly for its compatibility with RNAseq data. As compared to BWA, STAR Aligner is splice aware - meaning that it can match transcripts to the genome that have their introns spliced out. 
+
+To do this, I first had to download the human reference genome, as well as the index file:
+
+```{bash eval=FALSE}
+## on personal computer
+wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit
+
+wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/twoBitToFa
+
+chmod +x twoBitToFa
+
+./twoBitToFa hg38.2bit hg38.fa
+
+##get to server
+scp hg38.gtf ptg4001@aristotle.med.cornell.edu:
+
+
+spack load star@2.6.1a
+
+STAR --runMode genomeGenerate  --runThreadN 8 --genomeDir homo_sapien_STAR_index --genomeFastaFiles hg38.fa --sjdbGTFfile hg38.gtf --sjdbOverhang 100
+
+##overhang 100 as avg read length was 101
+```
+
+Then used the following SBATCH File (after ref genome moved to athena using mv command)
 
 ```{bash eval=FALSE}
 #! /bin/bash -l
@@ -106,6 +131,23 @@ for sample in 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22; do
 
 done
 
+```
+
+####Run Stats, Flagstats, and Multiqc
+
+Using the Samtools Stats and Flagstats will allow for preliminary quality analysis of the alignments, and Multiqc allows for easy visualization of Stat and Flagstat outputs in an HTML file. 
+
+Batch file: 
+```{bash eval=FALSE}
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=Project_Alignment
+#SBATCH --time=72:00:00   # HH/MM/SS
+#SBATCH --mem=100G       # memory requested, units available: K,M,G,T
+
 for sample in 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22; do
 
 	samtools index /home/ptg4001/Aligned_Project_Reads/SRR50711${sample}.Aligned.sortedByCoord.out.bam
@@ -122,10 +164,16 @@ multiqc -n project.multiqc.html /home/ptg4001/Project_Stats/.
 
 ```
 
+Then to get the output html onto my PC: 
+```{bash eval=FALSE}
+scp ptg4001@aristotle.med.cornell.edu:project.multiqc.html . 
+```
 
-####Run Feature Counts on Aligned Files
+####Run featureCounts on Aligned Files
 
-Used the following SBATCH File
+When using featureCounts, I used “-O” option, which allows for the reads to be counted according to meta-features, or rather the aggregation of a set of features (in this case genes), and -T 8 to utilize 8 threads.
+
+Coded in an SBATCH File as follows:
 
 ```{bash eval=FALSE}
 
@@ -144,75 +192,39 @@ featureCounts -a /home/ptg4001/hg38.gtf -O -o /home/ptg4001/Project_featurecount
 ```
 
 ####Import featureCounts readcounts
-```{r}
-##folder <- "~/Documents/Teaching/ANGSD/RNA/"
+
+```{r eval=FALSE}
 folder <- "./"
 # reading in featureCounts output
 readcounts <- read.table(paste0(folder, "Project_featurecounts.txt"),
 header=TRUE)
+
 head(readcounts)
-
 ```
 
-#### Just read counts with row names as geneids, rows with sums 0 deleted
-```{r}
-#library(org.Hs.eg.db)
-#library(annotate)
+####Get the gene transcript ids
 
-#count_table_adjusted <- readcounts[,7:22]
+Of note: the IDs for the transcripts are ensembl transcript id's
 
-#row.names(count_table_adjusted) <- getSYMBOL(as.character(readcounts[,1]), data='org.Hs.eg')
-
-#count_table_adjusted = count_table_adjusted[ rowSums(count_table_adjusted)!=0, ] 
-
-
-
-```
-
-####Finish preparing count table for analysis in DESeq
-
-```{r}
-
-
-## retrieve the ENSEMBL symbols for the gene names
-#anno.hs <- select(org.Hs.eg.db,
-#               keys = gns$V1, 
-#               keytype="SYMBOL", 
-#               columns=c("ENSEMBL","SYMBOL","GENENAME")) # what to return
-
+```{r eval=FALSE}
 gene_trans_ids <- as.character(readcounts[,1])
 
 gene_trans_ids <- gsub("\\..*","", gene_trans_ids)
-
-#AnnotationDbi::select(org.Hs.eg.db, key=gene_trans_ids, columns=c("SYMBOL"), keytype="ENSEMBLPROT")
-
-
-#library('biomaRt')
-#mart <- useDataset("hsapiens_gene_ensembl", useMart("ensembl"))
-#genes <- as.character(readcounts[,1])
-#df<-df[,-4]
-#G_list <- getBM(filters= "ensembl_peptide_id", attributes= c("ensembl_peptide_id","hgnc_symbol"),values=genes,mart= mart)
-#merge(df,G_list,by.x="gene",by.y="ensembl_peptide_id")
-
 ```
 
-```{r}
+####Get the gene symbols from the ensembl, and save generated data frame reference as "ProjectGenesDataFrame.csv"
+```{r eval=FALSE}
 library(biomaRt)
 
-# 3. Get symbols for Ensembl IDs
-
+#Get symbols for Ensembl IDs
 ensembl_ids = gene_trans_ids
 
-#ensembl_ids = c("ENSG00000243485", "ENSG00000237613", "ENSG00000186092", "ENSG00000238009")
-
 mart = useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", host = "www.ensembl.org", ensemblRedirect = FALSE)
-
-#mart <- useDataset("hsapiens_gene_ensembl", useMart("ensembl"))
 
 dat = getBM(
   values = ensembl_ids,
   filters = c("ensembl_transcript_id"),
-  attributes = c("ensembl_transcript_id", "external_gene_name", "description"),
+  attributes = c("ensembl_transcript_id", "external_gene_name", "description"), # what to return
   mart = mart
 )
 
@@ -232,7 +244,10 @@ write.csv(gene.id.df, file = "ProjectGenesDataFrame.csv")
 
 ```
 
+####Finish preparing count table for analysis in DESeq, which will be prepared and saved into counts_table_prepared.csv
 ```{r eval=FALSE}
+
+gene.id.df <- read.csv("ProjectGenesDataFrame.csv")
 
 count_table_adjusted <- readcounts[,7:22]
 
@@ -249,13 +264,7 @@ for(i in 1:length(gene_trans_ids)){
 
 row.names(count_table_adjusted) <- row_names_as_symbols
 
-
-
 save(row_names_as_symbols, file="row_names_as_symbols.rds")
-
-```
-
-```{r}
 
 counts_table_prepared <- count_table_adjusted[1,]
 row.names(counts_table_prepared) <- row_names_as_symbols[1]
@@ -271,11 +280,6 @@ for(i in 2:length(row_names_as_symbols)){
   }
 }
 
-```
-
-```{r}
-counts_table_prepared = counts_table_prepared[ rowSums(counts_table_prepared)!=0, ]
-
 column_names <- c("", "SRR5071107", "SRR5071108", "SRR5071109", "SRR5071110", "SRR5071111", "SRR5071112", "SRR5071113", "SRR5071114", "SRR5071115", "SRR5071116", "SRR5071117", "SRR5071118", "SRR5071119", "SRR5071120", "SRR5071121", "SRR5071122") 
 
 colnames(counts_table_prepared) <- column_names
@@ -285,17 +289,23 @@ ctpp <- counts_table_prepared[,2:17]
 row_names <- c()
 
 for(i in 1:dim(counts_table_prepared)[1]){
-  row_names <- c(row_names, as.character(counts_table_prepared[i,1]))
+  row_names <- c(row_names, as.character(counts_table_prepared[i,2]))
 }
 
-save(row_names, file="row_names.rds")
+counts_table_prepared <- ctpp
+
+#save(row_names, file="row_names.rds")
 #row.names(ctpp) <- row_names
 
-#write.csv(counts_table_prepared, file = "counts_table_prepared.csv")
+write.csv(counts_table_prepared, file = "counts_table_prepared.csv")
 ```
 
+####Load the prepared data frame (seen here as "ctpp") and then create a DESeq object using it
+```{r message=FALSE}
 
-```{r}
+ctpp <- read.csv(file = "counts_table_prepared.csv", row.names = 1)
+
+column_names <- c("SRR5071107", "SRR5071108", "SRR5071109", "SRR5071110", "SRR5071111", "SRR5071112", "SRR5071113", "SRR5071114", "SRR5071115", "SRR5071116", "SRR5071117", "SRR5071118", "SRR5071119", "SRR5071120", "SRR5071121", "SRR5071122") 
 
 sample_type = c("HIV_EXP_GFP_NEG", "HIV_EXP_GFP_NEG", "VLP_VPX_TREATED", "VLP_VPX_TREATED", "HIV_EXP_GFP_POS", "HIV_EXP_GFP_NEG", "VLP_VPX_TREATED", "NON_EXPOSED_OR_TREATED", "NON_EXPOSED_OR_TREATED", "HIV_EXP_GFP_POS", "HIV_EXP_GFP_NEG", "VLP_VPX_TREATED", "HIV_EXP_GFP_POS", "HIV_EXP_GFP_POS", "NON_EXPOSED_OR_TREATED", "NON_EXPOSED_OR_TREATED")
 
@@ -303,13 +313,11 @@ donor = c("Donor_4", "Donor_3", "Donor_4", "Donor_1", "Donor_1", "Donor_1", "Don
 
 column_data <- data.frame(sample_type, donor)
 
-rownames(column_data) <- column_names
+rownames(column_data) <- column_names[1:16]
 
 library("DESeq2")
 
 cts <- as.matrix(ctpp)
-
-row.names(cts) <- row_names
 
 save(cts, file="cts.rds")
 
@@ -317,109 +325,78 @@ dds <- DESeqDataSetFromMatrix(countData = cts,
                               colData = column_data,
                               design= ~ donor + sample_type)
 
-
 dds <- DESeq(dds)
-
 
 ```
 
-
-#### row sum >= 10
+####Keep transripts which have a sum of 10 transcripts over all samples
 ```{r}
 keep <- rowSums(counts(dds)) >= 10
 dds <- dds[keep,]
 ```
 
-#### set reference (control) as NON_EXPOSED_OR_TREATED
+####Set reference (control) as NON_EXPOSED_OR_TREATED
 ```{r}
 dds$sample_type <- relevel(dds$sample_type, ref = "HIV_EXP_GFP_NEG")
-
 ```
 
+####Set object "res" to contain the results of "HIV_EXP_GFP_POS" vs "HIV_EXP_GFP_NEG"
 ```{r}
-
-dds <- DESeq(dds)
-
-res <- results(dds)
+res <- results(dds, contrast=c("sample_type","HIV_EXP_GFP_POS", "HIV_EXP_GFP_NEG"))
 
 resultsNames(dds)
 
 ```
 
+####Save another log-fold-counts object for later use that compares "HIV_EXP_GFP_POS" vs "HIV_EXP_GFP_NEG" as "resLFC"
 ```{r}
-
-resultsNames(dds)
+#resultsNames(dds)
 
 resLFC <- lfcShrink(dds, coef="sample_type_HIV_EXP_GFP_POS_vs_HIV_EXP_GFP_NEG", type="apeglm")
-
-#BF_cutoff <- 39470
-
-#resLFC <- results(dds, alpha=0.05/BF_cutoff)
 ```
 
 ```{r}
 summary(resLFC)
 ```
+
+####See how many genes are signifantly upregulated (cutoff < 1*(10^-8)) in "HIV_EXP_GFP_POS" vs "HIV_EXP_GFP_NEG"
 ```{r}
-#resLFC <- results(resLFC, alpha=0.05/BF_cutoff)
-```
+sum(res$padj < 1*(10^-8), na.rm=TRUE)
 
-```{r}
+total_up_reg <- subset(res, res$padj < 1*(10^-8))
 
-resOrdered <- res[order(res$pvalue),]
+total_up_reg <- subset(total_up_reg, total_up_reg$log2FoldChange > 3)
 
-```
+nrow(total_up_reg)
 
-How many adjusted p-values were less than 0.1?
-
-```{r}
-#sum(res$padj < 0.1, na.rm=TRUE)
-```
-
-
-```{r}
-BF_cutoff <- 39470
-
-#res05 <- results(dds, alpha=0.05/BF_cutoff)
-#summary(res05)
-
-
-sum(resLFC$pvalue < 0.05/BF_cutoff, na.rm=TRUE)
-```
-
-MA-plot
-
-```{r}
-plotMA(resLFC, ylim=c(-4,4))
 
 ```
 
-```{r}
-#plotMA(resLFC, ylim=c(-4,4))
+#### Create MA-plot log2 Fold Changes "HIV_EXP_GFP_POS" vs "HIV_EXP_GFP_NEG"
 
-#summary(resLFC)
-#idx <- identify(res$baseMean, res$log2FoldChange)
+```{r}
+plotMA(resLFC, alpha= 10^-8, ylim=c(-4,4))
+```
+
+####Create Histogram of adjusted p-values of differentially expressed genes in "HIV_EXP_GFP_POS" vs "HIV_EXP_GFP_NEG". Also remove values including NA adjusted pvalue
+```{r}
+res_padj <- res$padj[which(res$padj != "NA")]
+hist(res_padj, breaks=100, col="skyblue", border="slateblue", main="")
+```
+
+####Histogram of p-values under 10^-8
+```{r}
+res_padj_under_co <- res_padj[which(res_padj < 10^-8)]
+hist(res_padj_under_co, breaks=100, col="skyblue", border="slateblue", main="")
 ```
 
 
+####Look at the most down-regulated of the significant genes
 ```{r}
 
-mcols(resLFC)$description
+ProjectGenesDataFrame <- read.csv("ProjectGenesDataFrame.csv")
 
-```
-
-
-```{r}
-hist(resLFC$pvalue, breaks=100, col="skyblue", border="slateblue", main="")
-
-```
-
-
-We may also want to look at the most strongly down-regulated of the significant genes,
-```{r}
-BF_cutoff_pval <- 0.05/BF_cutoff
-
-head( resLFC[ order( resLFC$log2FoldChange, -resLFC$baseMean ), ], 100 )
+#head( resLFC[ order( resLFC$log2FoldChange, -resLFC$baseMean ), ], 30 )
 
 Most_DR <-  resLFC[ order( resLFC$log2FoldChange, -resLFC$baseMean ), ]
 
@@ -428,10 +405,10 @@ Most_DR_top <- data.frame(Gene=character(), Log2FoldChange=double(), Pvalue=doub
 count <- 0
 
 for(i in 1:nrow(Most_DR)){
-  if(Most_DR$pvalue[i] < 0.05){
+  if(Most_DR$pvalue[i] < 1*10^-8){
     gene_name <- row.names(Most_DR[i,])
     gene_position_in_ref <- which(grepl(gene_name, ProjectGenesDataFrame$dat.external_gene_name))[1]
-    gene_description <- ProjectGenesDataFrame[gene_position_in_ref, 3]
+    gene_description <- as.character(ProjectGenesDataFrame[gene_position_in_ref, 3])
     count <- count + 1;
     Most_DR_top[count,] <- c(Gene=gene_name, Most_DR[i,]$log2FoldChange, Most_DR[i,]$pvalue,GeneDescription=gene_description)
   }
@@ -439,17 +416,214 @@ for(i in 1:nrow(Most_DR)){
     break
   }
 }
+```
+
+```{r}
+knitr::kable(Most_DR_top[1:10,], caption = '30 Most Down Regulated Genes (p < 1*10^-8')
 
 ```
 
 
-or at the most strongly up-regulated ones:
+####Look at the most down-regulated of the significant genes
 
 ```{r}
 
-head( resLFC[ order( -resLFC$log2FoldChange, -resLFC$baseMean ), ], 30 )
+#head( resLFC[ order( -resLFC$log2FoldChange, -resLFC$baseMean ), ], 30 )
+
+Most_UR <-  resLFC[ order( -resLFC$log2FoldChange, -resLFC$baseMean ), ]
+
+Most_UR_top <- data.frame(Gene=character(), Log2FoldChange=double(), Pvalue=double(), GeneDescription=character(), stringsAsFactors=FALSE)
+
+count <- 0
+
+for(i in 1:nrow(Most_UR)){
+  if(Most_UR$pvalue[i] < 1*10^-8){
+    gene_name <- row.names(Most_UR[i,])
+    gene_position_in_ref <- which(grepl(gene_name, ProjectGenesDataFrame$dat.external_gene_name))[1]
+    gene_description <- as.character(ProjectGenesDataFrame[gene_position_in_ref, 3])
+    count <- count + 1;
+    Most_UR_top[count,] <- c(Gene=gene_name, Most_UR[i,]$log2FoldChange, Most_UR[i,]$pvalue,GeneDescription=gene_description)
+  }
+  if(count == 30){
+    break
+  }
+}
+```
+
+```{r}
+knitr::kable(Most_UR_top[1:10,], caption = '10 Most Up Regulated Genes (p < 1*10^-8')
+```
+
+
+#### Look at Gene of Interest in Referenced Descours et al. Study, "CD32a" 
+
+NOTE: This gene name has synonym names, which in my analysis the gene synonym is "FCGR2A"
+
+```{r}
+
+d <- plotCounts(dds, gene=which(row.names(res) == "FCGR2A"), intgroup=c("sample_type"), 
+                returnData=TRUE)
+library("ggplot2")
+ggplot(d, aes(x=sample_type, y=count, color=donor)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) + 
+  scale_y_log10()
+
+```
+
+####Create PCA plots - one using sample type and other using donor variables
+```{r}
+
+library("pcaExplorer")
+
+rld <- rlog(dds)
+
+plotPCA(rld, intgroup="sample_type")
+
+plotPCA(rld, intgroup="donor")
+
+```
+
+####Create euclidean distance heatmaps of the samples
+```{r}
+
+sampleDists <- dist(t(assay(dds)))
+
+library("RColorBrewer")
+library("pheatmap")
+
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(dds$sample_type, dds$donor, sep="-")
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+
+
 
 ```
 
 
+####Volcano plot of the log2FoldChange vs pvalues for expression in "HIV_EXP_GFP_POS" vs "HIV_EXP_GFP_NEG" samples 
+```{r message=FALSE}
 
+library(EnhancedVolcano)
+
+EnhancedVolcano(res, lab = rownames(res), x = "log2FoldChange",y = "padj", pCutoff = 10e-8)
+
+```
+
+
+####Generate Histogram plot of log2 Fold Changes in the Surface Proteins of interest identified in Descours et al., using standard error for error bars
+```{r}
+
+surface_proteins_of_interest <- c("AQP9", "SUCNR1", "CEACAM3", "STEAP1B", "GJB2", "COLEC12", "HCAR2", "TREM1", "SCARF1", "CD300C", "CLEC4D", "TLR2", "FCGR2A")
+
+surface_proteins_of_interest_indexes <- c()
+for(i in surface_proteins_of_interest){
+  surface_proteins_of_interest_indexes <- c(surface_proteins_of_interest_indexes, which(row.names(res) == i))
+}
+
+log_2_changes_SPs <- c()
+
+##standard errors:
+se_SPs <- c()
+
+pvals_SPs <- c()
+
+for(i in surface_proteins_of_interest_indexes){
+  log_2_changes_SPs <- c(log_2_changes_SPs, res$log2FoldChange[i])
+  se_SPs <- c(se_SPs, res$lfcSE[i])
+  pvals_SPs <- c(pvals_SPs, res$padj[i])
+}
+
+#res$lfcSE
+
+SP_df <- data.frame(surface_proteins_of_interest, log_2_changes_SPs, se_SPs, pvals_SPs)
+
+SP_plot <- ggplot(SP_df, aes(surface_proteins_of_interest, log_2_changes_SPs)) + 
+                   geom_col() + geom_errorbar(aes(ymin = log_2_changes_SPs - se_SPs, ymax = log_2_changes_SPs + se_SPs), width=0.2)
+
+SP_plot
+
+SP_df
+## used the following to investigate genes one by one -- had to look up many name synonyms on ensembl
+which(row.names(res) == "AQP9")
+#which(row.names(res) == "CA12")  ### LEFT OUT!!!! to fit all in plot
+#which(row.names(res) == "SUCNR1") ##GPR91
+#which(row.names(res) == "CEACAM3") ##CD66d
+#which(row.names(res) == "STEAP1B")
+#which(row.names(res) == "GJB2")
+#which(row.names(res) == "COLEC12")
+#which(row.names(res) == "HCAR2") #NIACR1
+#which(row.names(res) == "TREM1") #CD354
+#unable to identify CSF2RA
+#which(row.names(res) == "SCARF1")
+#which(row.names(res) == "CD300C") #CD300c
+#which(row.names(res) == "CLEC4D")
+#which(row.names(res) == "TLR2")
+#which(row.names(res) == "FCGR2A")
+
+```
+
+
+##Results
+
+According to my own analysis, there were 585 significantly upregulated genes when comparing HIV positive versus the control HIV negative T cells, 166 of which had a log2 fold change more than 3, while there 0 significantly downregulated genes. These can be observed when looking at the Histograms of the adjusted p-values as well.  
+
+Upon observing the count comparisons for the gene of interest in Descours et al., “CD32a,” one can observe that the expression of CD32a (aka. FCGR2A) is significantly higher in the HIV infected cells.  
+
+When looking at the PCA plots, one can notice that there is not noticably significant clustering among the sample types, and rather appears to be a result of both the donor cell line as well as the sample type. This same trend additionally appears true for the heatmapping of the different samples. 
+
+The Volcano plot shows that there are many significantly upregulated genes, especially above a 2log change, however, there are some genes that show significanly higher upregulation that are still significant, such as TUSC7 and MYBPHL. Yet, the most significant upregulated gene was KLRC4-KLRK1, which had a log2 fold change of about 3. 
+
+Finally, when looking at the Histogram of the 15 of the identified upregulated surface protein genes identified in Descours et al., all of these appeared upregulated, although only about half of these genes had adjusted pvalues < 10*-8. 
+
+##Discussion
+
+While Descours et al. found 111 to be upregulated under the same p-value cutoff of 10*-8, as compared to my 585 significantly upregulated genes, they also found 0 significantly downregulated genes. However, Descours et al. fails to discuss whether there was a log2 fold change minimum for identifying such genes. If they did infact include an additional such cutoff, my results in this area would be much more inline with their findings. 
+
+Of note as well is the observation that the pvalues and logfold changes I found for “CD32a” was similar to that found in Descours et al. However the PCA plots and Heatmap I generated appeared to be more influenced by donor type than those published in Descours et al. 
+
+The observation that draws the most skepticism in my results, however, is the final histogram, which looks at 15 of the 16 upregulated surface protein genes identified in Descours et al. These genes were not all significantly upregulated in my findings, as were found in Descours et al. Additionally, they do not show the same upregulation pattern that is implied in Figure 2a of Descours et al., which looks at surface expression of these proteins via flow cytometry. 
+
+![Figure 2a. Expression values, determing by flow cytometry screening of 16 Surface Proteins Found to Be Upregulation in the HIV+ Cells as compared to HIV-negative controls ^7^](Figure_2a.png)
+
+While this was at first concerning, I later learned that these findings had been refuted a year later by another research group, which later published the following article in Nature as well: 
+
+Osuna, Christa E., et al. "Evidence that CD32a does not mark the HIV-1 latent reservoir." Nature 561.7723 (2018):E20^8^
+
+In this article, the researchers found no siginficant differences in screening via flow cytometry for the CD32a surface marker protein. However, the researchers in this article did not investigate differential gene expression in the cells.^8^
+
+Finally, a few points of concern are left. Regarding my own analysis, high duplication levels seen in the FastQCs of the raw read counts begs for a method to help cut down on these duplicats. In future analyses, it might be beneficial to use the --ignoreDup option in featureCounts to help elminate the influence of these duplicates on the differential gene expression analysis. Additionally, regarding the sample preparation done by Descours et al., the researchers only incubated the HIV infected cells for 4 days. It is unclear, however, as to whether this time period is sufficient for identifying indicative markers of differential gene expression of latently infected HIV+ T cells, as it has been known that HIV can lay dormant in cells for years or longer.  
+
+
+##Key Data Sets
+
+```{r}
+library("knitr")
+
+data_sets <- data.frame(file_name=c("ProjectGenesDataFrame.csv", "counts_table_prepared.csv"), file_description=c("Used to keep track of gene_id -> gene_symbols", "Prepared counts table, ready for input into DESeq2"))
+
+kable(data_sets)
+
+```
+
+##References
+
+1. UNAIDS. Global HIV &amp; AIDS statistics — 2018 fact sheet. (2018). Available at: http://www.unaids.org/en/resources/fact-sheet. (Accessed: 10th March 2019)
+
+2. Gebo, K. A. et al. Contemporary costs of HIV healthcare in the HAART era. AIDS (London, England) 24, 2705–15 (2010).
+
+3. Fonsah, J. Y. et al. Adherence to Antiretroviral Therapy (ART) in Yaoundé- Cameroon: Association with Opportunistic Infections, Depression, ART Regimen and Side Effects. PLOS ONE 12, e0170893 (2017).
+
+4. Siliciano, R. F. & Greene, W. C. HIV latency. Cold Spring Harbor perspectives in medicine 1, a007096 (2011).
+
+5. Cure, T. I. A. S. S. W. G. on H. et al. Towards an HIV cure: a global scientific strategy. Nature Reviews Immunology 12, 607–614 (2012).
+
+6. Darcis, G., Van Driessche, B. & Van Lint, C. HIV Latency: Should We Shock or Lock? Trends in Immunology 38, 217–228 (2017).
+
+7. Descours, B. et al. CD32a is a marker of a CD4 T-cell HIV reservoir harbouring replication-competent proviruses. Nature (2017). doi:10.1038/nature21710
+
+8. Osuna, Christa E., et al. "Evidence that CD32a does not mark the HIV-1 latent reservoir." Nature 561.7723 (2018):E20
